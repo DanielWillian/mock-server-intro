@@ -16,6 +16,7 @@ import java.net.http.HttpResponse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
+import static org.mockserver.model.JsonBody.json;
 
 @ExtendWith(MockServerExtension.class)
 class MockServerDemoTest {
@@ -140,5 +141,28 @@ class MockServerDemoTest {
 
         assertEquals("{\"id\": 1, \"firstName\": \"foo\", \"lastName\": \"bar\"}", response.body());
         assertEquals(201, response.statusCode());
+    }
+
+    @Test
+    void testBodyJsonTemplate() throws URISyntaxException, IOException, InterruptedException {
+        clientAndServer
+                .when(request()
+                        .withMethod("PUT")
+                        .withPath("/users/{id}")
+                        .withPathParameter("id", "1")
+                        .withBody(json("{\"firstName\": \"${json-unit.any-string}\", \"lastName\": \"bar\"}")))
+                .respond(response()
+                        .withStatusCode(200)
+                        .withBody("{\"id\": 1, \"firstName\": \"someString\", \"lastName\": \"bar\"}"));
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest
+                .newBuilder(new URI("http://localhost:" + clientAndServer.getPort() + "/users/1"))
+                .PUT(HttpRequest.BodyPublishers.ofString("{\"firstName\": \"someString\", \"lastName\": \"bar\"}"))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals("{\"id\": 1, \"firstName\": \"someString\", \"lastName\": \"bar\"}", response.body());
+        assertEquals(200, response.statusCode());
     }
 }
