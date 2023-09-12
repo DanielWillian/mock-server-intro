@@ -50,4 +50,26 @@ class MockServerDemoTest {
         assertEquals("[{\"firstName\": \"foo\", \"lastName\": \"bar\"}]", response.body());
         assertEquals(200, response.statusCode());
     }
+
+    @Test
+    void testPathParameters() throws URISyntaxException, IOException, InterruptedException {
+        clientAndServer
+                .when(request()
+                        .withMethod("GET")
+                        .withPath("/users/{id}")
+                        .withPathParameter("id", "1"))
+                .respond(response()
+                        .withStatusCode(200)
+                        .withBody("{\"firstName\": \"foo\", \"lastName\": \"bar\"}"));
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest
+                .newBuilder(new URI("http://localhost:" + clientAndServer.getPort() + "/users/1"))
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals("{\"firstName\": \"foo\", \"lastName\": \"bar\"}", response.body());
+        assertEquals(200, response.statusCode());
+    }
 }
